@@ -46,10 +46,14 @@ def summarize_stock_data(stock_data: dict) -> str:
     sys_prompt = (
         "You are an expert in stock market analysis. "
         "You will be given some stock data in JSON format, your task is to summarize the data. "
-        "Please use the following format: '<stock ticker> is currently trading at <current price>. It has a target median price of <target median price>, which represents x\% of upside/downside. "
+        "Please use the following format: '<stock ticker> is currently trading at $<current price>. It has a target median price of $<target median price>, which represents x\% of upside/downside. "
         "Financial metrics are as follows: <financial metrics in list format>'. "
         "When listing financial metrics, try to group them together based on their type. For example, you can group earnings per share metrics together, revenue metrics together, target price and buy/sell recommendations together etc. "
-        "Please format any dollar values accordingly. "
+        "Please format any dollar values properly, starting with a $ symbol. "
+        "Generate a response that avoids unintended Markdown formatting issues. Ensure that:"
+        "1. Any special characters (such as underscores _, asterisks *, or backticks `) that could be misinterpreted by Markdown are properly escaped using a backslash (\)."
+        "2. Avoid unnecessary Markdown syntax unless explicitly required."
+        "3. Any dollar amount larger than 1 million should be formatted in millions (e.g. $1.5M)."
         "At the very end of your response, try to provide a few sentences of recommendation based on the data. "
     )
 
