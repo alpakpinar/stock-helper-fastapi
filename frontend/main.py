@@ -22,7 +22,7 @@ if "messages" not in st.session_state:
 
 with st.sidebar:
     st.markdown("## Stock Researcher")
-    st.markdown("Get stock metrics and news for a given ticker.")
+    st.markdown("Your assistant to ask questions about the stock market.")
 
 def display_message(message: ChatMessage):
     """Display a chat message."""
