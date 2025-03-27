@@ -1,57 +1,46 @@
 import json
+import time
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
-from models import StockMetricsResponseModel, StockNewsResponseModel, NewsArticle
-from services import fetch_stock_data, summarize_stock_data, fetch_stock_news, summarize_news
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
+
+from models import ClientMessage, ServerResponse
+from services import fetch_stock_data, fetch_stock_news
 from utils import extract_json_from_text
 
 load_dotenv()
 
 app = FastAPI()
 
-@app.get("/metrics/{ticker}", response_model=StockMetricsResponseModel)
-def get_stock_data(ticker: str):
-    """Get stock data for a given ticker and respond to client with the summary of the data."""
-    # Get the data for the ticker using Yahoo Finance API
-    stock_data = fetch_stock_data(ticker)
+model = ChatOpenAI(model="gpt-4o")
+tools = [fetch_stock_data, fetch_stock_news]
 
-    if not stock_data:
-        return HTTPException(status_code=404, detail=f"Stock {ticker} is not found.")
-    
-    summary = summarize_stock_data(stock_data)
+sys_prompt = (
+    "You are an expert in stock market analysis. "
+    "Your task is to answer questions about a particular stock. "
+    "Try to be as informative as possible and provide detailed explanations. "
+    "Make sure any dollar value starts with a '$' symbol, do not try to apply formatting on the numbers. "
+    "Generate a response that avoids unintended Markdown formatting issues. Ensure that:"
+    "1. Any special characters (such as underscores _, asterisks *, or backticks `) that could be misinterpreted by Markdown are properly escaped using a backslash (\)."
+    "2. Avoid unnecessary Markdown syntax unless explicitly required."
+    "3. Any dollar amount larger than 1 million should be formatted in millions (e.g. $1.5M)."
+)
 
-    return StockMetricsResponseModel(summary=summary, stock_ticker=stock_data["symbol"])
+agent = create_react_agent(model, tools, prompt=sys_prompt)
+
+@app.post("/answer", response_model=ServerResponse)
+def answer_question(message: ClientMessage):
+    """Answer questions about a given stock ticker."""
+    start = time.time()
+    response = agent.invoke({"messages": [("human", message.content)]})
+    end = time.time()
+
+    return ServerResponse(query=message.content, response=response["messages"][-1].content, time_taken=end-start)
 
 
-@app.get("/news/{ticker}", response_model=StockNewsResponseModel)
-def get_stock_news(ticker: str):
-    """Get stock news for a given ticker and respond to client with the summary of the news."""
-    stock_news = fetch_stock_news(ticker, num_articles_max=5)
-
-    if not stock_news:
-        return HTTPException(status_code=404, detail=f"No news articles are found for stock {ticker}.")
-
-    processed_articles = []
-
-    for article in stock_news:
-        raw = summarize_news(article)
-        response = extract_json_from_text(raw)
-        if not response:
-            continue
-
-        processed_articles.append(
-            NewsArticle(
-                title=article["content"]["title"],
-                url=article["content"]["clickThroughUrl"]["url"],
-                summary=response["summary"],
-                sentiment=response["sentiment"]
-            )
-        )
-
-    
-    return StockNewsResponseModel(stock_ticker=ticker, articles=processed_articles)
 
 
 
