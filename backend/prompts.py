@@ -25,7 +25,7 @@ summarizer_prompt = (
     "3. Any dollar amount larger than 1 million should be formatted in millions (e.g. $1.5M). "
     "Follow the following format: "
     "The current price of <ticker> is $<current price>. The target price range is $<target low> - $<target high>, with an upside/downside of <upside/downside according to median target>. The analyst recommendation is <recommendation>. "
-    "The revenue for the last fiscal year was $<revenue> with a revenue per share of $<revenue per share>. The market capitalization is $<market cap>. "
+    "The revenue for the last fiscal year was $<revenue> with a earnings per share of $<earnings per share>. The market capitalization is $<market cap>. "
     "Dividend yield is <dividend yield>, amounting to a dividend per share of $<dividend per share>. "
     "**Recent related news:** <list of news in bullet points including: brief summary and link to original news website> "
 

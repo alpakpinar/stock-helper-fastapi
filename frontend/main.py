@@ -3,12 +3,12 @@ import json
 import requests
 import pandas as pd
 import streamlit as st
-import altair as alt
 
 from typing import Optional
 from dotenv import load_dotenv
 
 from models import ChatMessage
+from plotters.history import plot_stock_history
 
 load_dotenv()
 
@@ -29,15 +29,6 @@ def fetch_stock_history(ticker: str, period: str = "1y") -> dict:
     return json.loads(response["history"])
 
 
-def plot_stock_history(ticker: str, period: str = "1y"):
-    """Plot historical stock data."""
-    historical_data = fetch_stock_history(ticker, period)
-    df = pd.DataFrame(historical_data)
-
-    st.header(f"Stock Price History for {ticker.upper()} ({period})")
-    st.line_chart(df["Close"])
-
-
 def handle_stock_query():
     """Handle stock queries."""
     ticker = st.session_state.ticker
@@ -55,16 +46,7 @@ def handle_stock_query():
     st.markdown(summary)
 
     # Create the chart
-    y_min = df["Close"].min() * 0.8
-    y_max = df["Close"].max() * 1.2
-    chart = alt.Chart(df).mark_line().encode(
-        x='Date:T',
-        y=alt.Y('Close:Q', axis=alt.Axis(title='Closing Price ($)'), scale=alt.Scale(domain=[y_min, y_max]))
-    )
-
-    # Display the chart in Streamlit
-    st.altair_chart(chart, use_container_width=True)
-
+    st.plotly_chart(plot_stock_history(df, ticker), use_container_width=True)
 
 
 with st.sidebar:
