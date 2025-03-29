@@ -7,7 +7,7 @@ import streamlit as st
 from typing import Optional
 from dotenv import load_dotenv
 
-from models import ChatMessage
+from models import ChatMessage, StockOverview
 from plotters.history import plot_stock_history
 
 load_dotenv()
@@ -22,6 +22,9 @@ set_wide_mode()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "stock_overviews" not in st.session_state:
+    st.session_state.stock_overviews = []
+
 
 def fetch_stock_history(ticker: str, period: str = "1y") -> dict:
     """Fetch historical stock data for a given ticker symbol."""
@@ -34,19 +37,23 @@ def handle_stock_query():
     ticker = st.session_state.ticker
     period = "1y"
 
-    with st.spinner("Fetching historical price data..."):
+    with st.status(f"Searching data for {ticker}...", expanded=True) as status:
+        st.write("Fetching historical price data.")
         historical_data = fetch_stock_history(ticker, period=period)
         df = pd.DataFrame(historical_data)
-
-    with st.spinner("Compiling summary..."):
+        
+        
+        st.write("Compiling summary of metrics and news.")
         response = requests.get(f"{API_ENDPOINT}/summary/{ticker}").json()
         summary = response["response"]
+        
+        status.update(
+            label="Done!", state="complete", expanded=False
+        )
 
-    st.markdown(f"### Stock: {ticker.upper()}")
-    st.markdown(summary)
+    overview = StockOverview(symbol=ticker, ai_summary=summary, historical_data=df.to_json())
 
-    # Create the chart
-    st.plotly_chart(plot_stock_history(df, ticker), use_container_width=True)
+    st.session_state.stock_overviews.append(overview)
 
 
 with st.sidebar:
@@ -54,6 +61,15 @@ with st.sidebar:
     st.markdown("Your assistant to ask questions about the stock market.")
 
     st.text_input("Stock Ticker", key="ticker", on_change=handle_stock_query)
+
+
+def display_stock_overview(overview: StockOverview):
+    """Display a stock overview."""
+    st.markdown(f"### Stock: {overview.symbol.upper()}")
+    st.markdown(overview.ai_summary)
+
+    df = pd.DataFrame(json.loads(overview.historical_data))
+    st.plotly_chart(plot_stock_history(df, overview.symbol), use_container_width=True)
 
 
 def display_message(message: ChatMessage):
@@ -72,11 +88,23 @@ def handle_user_input(prompt: str):
     st.session_state.messages.append(user_msg)
 
     with st.spinner("Analyzing..."):
-        response = requests.post(f"{API_ENDPOINT}/answer", json={"content": prompt}).json()
+        context_builder = []
+        for stock_overview in st.session_state.stock_overviews:
+            context_builder.append(stock_overview.ai_summary)
+        
+        payload = {"query": prompt}
+
+        if context_builder:
+            payload["context"] = " ".join(context_builder)
+
+        response = requests.post(f"{API_ENDPOINT}/answer", json=payload).json()
         assistant_msg = ChatMessage(role="assistant", content=response["response"], caption=f"Time taken: {response['time_taken']:.3f} seconds")
 
         display_message(assistant_msg)
         st.session_state.messages.append(assistant_msg)
+
+for overview in st.session_state.stock_overviews:
+    display_stock_overview(overview)
 
 for message in st.session_state.messages:
     display_message(message)

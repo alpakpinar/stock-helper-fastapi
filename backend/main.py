@@ -24,16 +24,22 @@ def answer_question(message: ClientMessage):
     """Answer questions about a given stock ticker."""
     start = time.time()
     agent = create_react_agent(model, tools, prompt=Prompt.QA_BOT)
+
+    messages = []
+    if message.context is not None:
+        messages.append(("human", f"Here is the past conversation for context: {message.context}"))
     
+    messages.append(("human", message.query))
+
     try:
-        response = agent.invoke({"messages": [("human", message.content)]})
+        response = agent.invoke({"messages": messages})
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
     end = time.time()
 
-    return ServerResponse(query=message.content, response=response["messages"][-1].content, time_taken=end-start)
+    return ServerResponse(query=message.query, response=response["messages"][-1].content, time_taken=end-start)
 
 
 @app.get("/summary/{ticker}", response_model=ServerResponse)

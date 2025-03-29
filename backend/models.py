@@ -1,10 +1,11 @@
 from pydantic import BaseModel
-from typing import List
+from typing import Optional
 
 
 class ClientMessage(BaseModel):
     """Model for client messages."""
-    content: str
+    query: str
+    context: Optional[str] = None
 
 
 class ServerResponse(BaseModel):

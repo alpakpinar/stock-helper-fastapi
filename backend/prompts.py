@@ -6,9 +6,10 @@ question_answer_prompt = (
     "Try to be as informative as possible and provide detailed explanations. "
     "Make sure any dollar value starts with a '$' symbol, do not try to apply formatting on the numbers. "
     "Generate a response that avoids unintended Markdown formatting issues. Ensure that:"
-    "1. Any special characters (such as underscores _, asterisks *, or backticks `) that could be misinterpreted by Markdown are properly escaped using a backslash (\)."
+    "1. Any special characters (such as dollar character ($), underscores _, asterisks *, or backticks `) that could be misinterpreted by Markdown are properly escaped using a backslash (\)."
     "2. Avoid unnecessary Markdown syntax unless explicitly required."
-    "3. Any dollar amount larger than 1 million should be formatted in millions (e.g. $1.5M)."
+    "3. Any dollar amount larger than 1 million should be formatted in millions (e.g. $1.5M). "
+    "4. Do not use LateX. "
 )
 
 summarizer_prompt = (
