@@ -1,6 +1,9 @@
 import os
+import json
 import requests
+import pandas as pd
 import streamlit as st
+import altair as alt
 
 from typing import Optional
 from dotenv import load_dotenv
@@ -20,9 +23,56 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
+def fetch_stock_history(ticker: str, period: str = "1y") -> dict:
+    """Fetch historical stock data for a given ticker symbol."""
+    response = requests.get(f"{API_ENDPOINT}/history", params={"ticker": ticker, "period": period}).json()
+    return json.loads(response["history"])
+
+
+def plot_stock_history(ticker: str, period: str = "1y"):
+    """Plot historical stock data."""
+    historical_data = fetch_stock_history(ticker, period)
+    df = pd.DataFrame(historical_data)
+
+    st.header(f"Stock Price History for {ticker.upper()} ({period})")
+    st.line_chart(df["Close"])
+
+
+def handle_stock_query():
+    """Handle stock queries."""
+    ticker = st.session_state.ticker
+    period = "1y"
+
+    with st.spinner("Fetching historical price data..."):
+        historical_data = fetch_stock_history(ticker, period=period)
+        df = pd.DataFrame(historical_data)
+
+    with st.spinner("Compiling summary..."):
+        response = requests.get(f"{API_ENDPOINT}/summary/{ticker}").json()
+        summary = response["response"]
+
+    st.markdown(f"### Stock: {ticker.upper()}")
+    st.markdown(summary)
+
+    # Create the chart
+    y_min = df["Close"].min() * 0.8
+    y_max = df["Close"].max() * 1.2
+    chart = alt.Chart(df).mark_line().encode(
+        x='Date:T',
+        y=alt.Y('Close:Q', axis=alt.Axis(title='Closing Price ($)'), scale=alt.Scale(domain=[y_min, y_max]))
+    )
+
+    # Display the chart in Streamlit
+    st.altair_chart(chart, use_container_width=True)
+
+
+
 with st.sidebar:
     st.markdown("## Stock Researcher")
     st.markdown("Your assistant to ask questions about the stock market.")
+
+    st.text_input("Stock Ticker", key="ticker", on_change=handle_stock_query)
+
 
 def display_message(message: ChatMessage):
     """Display a chat message."""

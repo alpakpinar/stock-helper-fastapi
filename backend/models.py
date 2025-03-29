@@ -12,3 +12,10 @@ class ServerResponse(BaseModel):
     query: str
     response: str
     time_taken: float
+
+
+class PriceHistoryResponse(BaseModel):
+    """Model for price history responses."""
+    period: str
+    ticker: str
+    history: str
